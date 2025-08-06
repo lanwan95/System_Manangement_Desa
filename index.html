@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Manajemen Desa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+
+    <div id="login-screen" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center hidden p-4">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md text-center relative">
+            <button onclick="closeLoginScreen()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800"><i class="fa-solid fa-xmark fa-lg"></i></button>
+            <i class="fa-solid fa-user-shield text-6xl text-indigo-600 mb-4"></i>
+            <h2 class="text-3xl font-bold text-gray-800 mb-2">Login Admin</h2>
+            <p class="text-gray-500 mb-6">Masukkan kata sandi admin untuk melanjutkan.</p>
+            <div class="space-y-4">
+                <input type="password" id="adminPasswordInput" placeholder="Kata Sandi Admin" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <button onclick="loginAdmin()" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition">
+                    Masuk
+                </button>
+            </div>
+            <p id="login-error" class="text-red-500 mt-4 hidden">Kata sandi salah!</p>
+        </div>
+    </div>
+
+    <div id="app-interface" class="flex-1 flex h-screen overflow-hidden">
+        <aside class="w-64 bg-gray-800 text-gray-100 flex flex-col p-4">
+            <div class="flex items-center space-x-2 pb-4 mb-4 border-b border-gray-700">
+                <i class="fa-solid fa-house-chimney-user text-3xl text-indigo-400"></i>
+                <h1 class="text-2xl font-bold">SIDeM</h1>
+            </div>
+            <nav class="flex-1 space-y-2">
+                <button id="navDashboard" onclick="changeView('dashboard')" class="w-full text-left py-2 px-3 rounded-lg font-medium hover:bg-gray-700 transition flex items-center space-x-3 nav-item">
+                    <i class="fa-solid fa-chart-line w-5"></i><span>Dashboard</span>
+                </button>
+                <button id="navPopulation" onclick="changeView('population')" class="w-full text-left py-2 px-3 rounded-lg font-medium hover:bg-gray-700 transition flex items-center space-x-3 nav-item">
+                    <i class="fa-solid fa-users w-5"></i><span>Penduduk</span>
+                </button>
+                <button id="navAssets" onclick="changeView('assets')" class="w-full text-left py-2 px-3 rounded-lg font-medium hover:bg-gray-700 transition flex items-center space-x-3 nav-item">
+                    <i class="fa-solid fa-building-flag w-5"></i><span>Aset Desa</span>
+                </button>
+                <button id="navDevelopment" onclick="changeView('development')" class="w-full text-left py-2 px-3 rounded-lg font-medium hover:bg-gray-700 transition flex items-center space-x-3 nav-item">
+                    <i class="fa-solid fa-road w-5"></i><span>Pembangunan</span>
+                </button>
+                <button id="navFinances" onclick="changeView('finances')" class="w-full text-left py-2 px-3 rounded-lg font-medium hover:bg-gray-700 transition flex items-center space-x-3 nav-item">
+                    <i class="fa-solid fa-coins w-5"></i><span>Keuangan</span>
+                </button>
+                <button id="navBansos" onclick="changeView('bansos')" class="w-full text-left py-2 px-3 rounded-lg font-medium hover:bg-gray-700 transition flex items-center space-x-3 nav-item">
+                    <i class="fa-solid fa-hand-holding-heart w-5"></i><span>Bantuan Sosial</span>
+                </button>
+                <button id="navComplaints" onclick="changeView('complaints')" class="w-full text-left py-2 px-3 rounded-lg font-medium hover:bg-gray-700 transition flex items-center space-x-3 nav-item">
+                    <i class="fa-solid fa-comments w-5"></i><span>Pengaduan</span>
+                </button>
+                <button id="navActivityLogs" onclick="changeView('activityLogs')" class="w-full text-left py-2 px-3 rounded-lg font-medium hover:bg-gray-700 transition flex items-center space-x-3 nav-item">
+                    <i class="fa-solid fa-clipboard-list w-5"></i><span>Laporan Aktivitas</span>
+                </button>
+            </nav>
+            <div class="pt-4 mt-4 border-t border-gray-700">
+                <div class="flex items-center space-x-2 mb-2">
+                    <p class="text-xs text-gray-400">Peran:</p>
+                    <span id="currentRoleDisplay" class="text-sm font-semibold text-indigo-300 capitalize">Masyarakat Umum</span>
+                </div>
+                <div id="admin-login-logout-button">
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 overflow-auto p-8">
+            <div id="dashboard-content" class="content">
+                <header class="pb-6 mb-6 border-b border-gray-300">
+                    <h2 class="text-3xl font-bold text-gray-800">Dashboard</h2>
+                </header>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="dashboard-cards">
+                </div>
+                <div class="card bg-white p-6 rounded-xl shadow-md mt-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">Ringkasan Keuangan</h3>
+                    <p class="text-2xl font-bold text-green-600 mb-2">Pemasukan: Rp <span id="pemasukan-total">0</span></p>
+                    <p class="text-2xl font-bold text-red-600 mb-2">Pengeluaran: Rp <span id="pengeluaran-total">0</span></p>
+                    <p class="text-2xl font-bold text-indigo-600">Saldo: Rp <span id="saldo-total">0</span></p>
+                </div>
+            </div>
+
+            <div id="population-content" class="content hidden">
+                <header class="pb-6 mb-6 border-b border-gray-300 flex justify-between items-center">
+                    <h2 class="text-3xl font-bold text-gray-800">Manajemen Data Penduduk</h2>
+                    <div id="penduduk-admin-controls" class="hidden">
+                        <button onclick="openPendudukModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition"><i class="fa-solid fa-plus mr-2"></i>Tambah Penduduk</button>
+                    </div>
+                </header>
+                <div id="penduduk-table-container" class="overflow-x-auto bg-white rounded-xl shadow-md">
+                </div>
+            </div>
+
+            <div id="assets-content" class="content hidden">
+                <header class="pb-6 mb-6 border-b border-gray-300 flex justify-between items-center">
+                    <h2 class="text-3xl font-bold text-gray-800">Manajemen Aset Desa</h2>
+                    <div id="aset-admin-controls" class="hidden">
+                        <button onclick="openAsetModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition"><i class="fa-solid fa-plus mr-2"></i>Tambah Aset</button>
+                    </div>
+                </header>
+                <div id="aset-table-container" class="overflow-x-auto bg-white rounded-xl shadow-md">
+                </div>
+            </div>
+
+            <div id="development-content" class="content hidden">
+                <header class="pb-6 mb-6 border-b border-gray-300 flex justify-between items-center">
+                    <h2 class="text-3xl font-bold text-gray-800">Manajemen Pembangunan</h2>
+                    <div id="pembangunan-admin-controls" class="hidden">
+                        <button onclick="openPembangunanModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition"><i class="fa-solid fa-plus mr-2"></i>Tambah Pembangunan</button>
+                    </div>
+                </header>
+                <div id="pembangunan-table-container" class="overflow-x-auto bg-white rounded-xl shadow-md">
+                </div>
+            </div>
+            
+            <div id="finances-content" class="content hidden">
+                <header class="pb-6 mb-6 border-b border-gray-300 flex justify-between items-center">
+                    <h2 class="text-3xl font-bold text-gray-800">Manajemen Keuangan</h2>
+                    <div id="keuangan-admin-controls" class="hidden">
+                        <button onclick="openKeuanganModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition"><i class="fa-solid fa-plus mr-2"></i>Tambah Transaksi</button>
+                    </div>
+                </header>
+                <div id="keuangan-table-container" class="overflow-x-auto bg-white rounded-xl shadow-md">
+                </div>
+            </div>
+            
+            <div id="bansos-content" class="content hidden">
+                <header class="pb-6 mb-6 border-b border-gray-300 flex justify-between items-center">
+                    <h2 class="text-3xl font-bold text-gray-800">Manajemen Bantuan Sosial</h2>
+                    <div id="bansos-admin-controls" class="hidden">
+                        <button onclick="openBansosModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition"><i class="fa-solid fa-plus mr-2"></i>Tambah Bantuan</button>
+                    </div>
+                </header>
+                <div id="bansos-table-container" class="overflow-x-auto bg-white rounded-xl shadow-md">
+                </div>
+            </div>
+            
+            <div id="complaints-content" class="content hidden">
+                <header class="pb-6 mb-6 border-b border-gray-300 flex justify-between items-center">
+                    <h2 class="text-3xl font-bold text-gray-800">Manajemen Pengaduan</h2>
+                    <div id="pengaduan-admin-controls" class="hidden">
+                        <button onclick="openPengaduanModal()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition"><i class="fa-solid fa-plus mr-2"></i>Tambah Pengaduan</button>
+                    </div>
+                </header>
+                <div id="pengaduan-table-container" class="overflow-x-auto bg-white rounded-xl shadow-md">
+                </div>
+            </div>
+
+            <div id="activityLogs-content" class="content hidden">
+                <header class="pb-6 mb-6 border-b border-gray-300">
+                    <h2 class="text-3xl font-bold text-gray-800">Laporan Aktivitas Sistem</h2>
+                </header>
+                <div class="filter-section bg-white p-6 rounded-xl shadow-md mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                        <div>
+                            <label for="logStartDate" class="block text-sm font-medium text-gray-700">Dari Tanggal:</label>
+                            <input type="date" id="logStartDate" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                        </div>
+                        <div>
+                            <label for="logEndDate" class="block text-sm font-medium text-gray-700">Sampai Tanggal:</label>
+                            <input type="date" id="logEndDate" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                        </div>
+                        <div>
+                            <label for="logUserFilter" class="block text-sm font-medium text-gray-700">Pengguna:</label>
+                            <select id="logUserFilter" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                                <option value="">Semua Pengguna</option>
+                                <option value="admin_desa">admin_desa</option>
+                                <option value="guest">guest</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="logModuleFilter" class="block text-sm font-medium text-gray-700">Modul:</label>
+                            <select id="logModuleFilter" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                                <option value="">Semua Modul</option>
+                                <option value="Penduduk">Penduduk</option>
+                                <option value="Aset Desa">Aset Desa</option>
+                                <option value="Pembangunan">Pembangunan</option>
+                                <option value="Keuangan">Keuangan</option>
+                                <option value="Bantuan Sosial">Bantuan Sosial</option>
+                                <option value="Pengaduan">Pengaduan</option>
+                                <option value="Sistem">Sistem</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="logActionTypeFilter" class="block text-sm font-medium text-gray-700">Tipe Aksi:</label>
+                            <select id="logActionTypeFilter" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                                <option value="">Semua Aksi</option>
+                                <option value="CREATE">CREATE</option>
+                                <option value="UPDATE">UPDATE</option>
+                                <option value="DELETE">DELETE</option>
+                                <option value="VIEW">VIEW</option>
+                                <option value="LOGIN">LOGIN</option>
+                                <option value="LOGOUT">LOGOUT</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="logSearchText" class="block text-sm font-medium text-gray-700">Cari Teks:</label>
+                            <input type="text" id="logSearchText" placeholder="Deskripsi, ID, dll." class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                        </div>
+                    </div>
+                    <div class="flex justify-end space-x-2">
+                        <button onclick="applyLogFilters()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition"><i class="fa-solid fa-filter mr-2"></i>Terapkan Filter</button>
+                        <button onclick="exportActivityLogsToExcel()" class="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition"><i class="fa-solid fa-file-excel mr-2"></i>Export ke Excel</button>
+                    </div>
+                </div>
+                
+                <div id="log-table-container" class="overflow-x-auto bg-white rounded-xl shadow-md">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waktu</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pengguna</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Modul</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Record</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deskripsi</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP Address</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Detail</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activityLogsTableBody" class="bg-white divide-y divide-gray-200">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="pendudukModal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="pendudukModalTitle" class="text-xl font-bold text-gray-800">Tambah Penduduk</h3>
+                <button onclick="closePendudukModal()" class="text-gray-500 hover:text-gray-800"><i class="fa-solid fa-xmark fa-lg"></i></button>
+            </div>
+            <form id="pendudukForm" class="space-y-4">
+                <input type="hidden" id="pendudukId">
+                <input type="text" id="nik" placeholder="NIK" required class="w-full p-2 border border-gray-300 rounded-lg">
+                <input type="text" id="kk" placeholder="Nomor KK" required class="w-full p-2 border border-gray-300 rounded-lg">
+                <input type="text" id="nama" placeholder="Nama Lengkap" required class="w-full p-2 border border-gray-300 rounded-lg">
+                <input type="number" id="usia" placeholder="Usia" required class="w-full p-2 border border-gray-300 rounded-lg">
+                <input type="text" id="pekerjaan" placeholder="Pekerjaan" required class="w-full p-2 border border-gray-300 rounded-lg">
+                <input type="text" id="pendidikan" placeholder="Pendidikan" required class="w-full p-2 border border-gray-300 rounded-lg">
+                <input type="text" id="status_kawin" placeholder="Status Perkawinan" required class="w-full p-2 border border-gray-300 rounded-lg">
+                <textarea id="riwayat_domisili" placeholder="Riwayat Domisili" class="w-full p-2 border border-gray-300 rounded-lg"></textarea>
+                <div class="mt-6 flex justify-end space-x-2">
+                    <button type="button" onclick="closePendudukModal()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-300 transition">Batal</button>
+                    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="asetModal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="asetModalTitle" class="text-xl font-bold text-gray-800">Tambah Aset</h3>
+                <button onclick="closeAsetModal()" class="text-gray-500 hover:text-gray-800"><i class="fa-solid fa-xmark fa-lg"></i></button>
+            </div>
+            <form id="asetForm" class="space-y-4">
+                <input type="hidden" id="asetId">
+                <input type="text" id="nama_aset" placeholder="Nama Aset" required class="w-full p-2 border border-gray-300 rounded-lg">
+                <input type="number" id="jumlah" placeholder="Jumlah" required class="w-full p-2 border border-gray-300 rounded-lg">
+                <input type="text" id="kondisi" placeholder="Kondisi (Baik/Rusak)" required class="w-full p-2 border border-gray-300 rounded-lg">
+                <input type="text" id="lokasi" placeholder="Lokasi Aset" required class="w-full p-2 border border-gray-300 rounded-lg">
+                <div class="mt-6 flex justify-end space-x-2">
+                    <button type="button" onclick="closeAsetModal()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-300 transition">Batal</button>
+                    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="pembangunanModal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="pembangunanModalTitle" class="text-xl font-bold text-gray-800">Tambah Pembangunan</h3>
+                <button onclick="closePembangunanModal()" class="text-gray-500 hover:text-gray-800"><i class="fa-solid fa-xmark fa-lg"></i></button>
+            </div>
+            <form id="pembangunanForm" class="space-y-4">
+                <input type="hidden" id="pembangunanId">
+                <input type="text" id="pembangunanNama" placeholder="Nama Proyek" required class="w-full p-2 border border-gray-300 rounded-lg">
+                <input type="text" id="pembangunanStatus" placeholder="Status (Proses/Selesai)" required class="w-full p-2 border border-gray-300 rounded-lg">
+                <input type="number" id="pembangunanAnggaran" placeholder="Anggaran" required class="w-full p-2 border border-gray-300 rounded-lg">
+                <div class="mt-6 flex justify-end space-x-2">
+                    <button type="button" onclick="closePembangunanModal()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-300 transition">Batal</button>
+                    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="keuanganModal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="keuanganModalTitle" class="text-xl font-bold text-gray-800">Tambah Transaksi</h3>
+                <button onclick="closeKeuanganModal()" class="text-gray-500 hover:text-gray-800"><i class="fa-solid fa-xmark fa-lg"></i></button>
+            </div>
+            <form id="keuanganForm" class="space-y-4">
+                <input type="hidden" id="keuanganId">
+                <select id="keuanganTipe" required class="w-full p-2 border border-gray-300 rounded-lg">
+                    <option value="">Pilih Tipe</option>
+                    <option value="pemasukan">Pemasukan</option>
+                    <option value="pengeluaran">Pengeluaran</option>
+                </select>
+                <input type="text" id="keuanganDeskripsi" placeholder="Deskripsi" required class="w-full p-2 border border-gray-300 rounded-lg">
+                <input type="number" id="keuanganJumlah" placeholder="Jumlah" required class="w-full p-2 border border-gray-300 rounded-lg">
+                <div class="mt-6 flex justify-end space-x-2">
+                    <button type="button" onclick="closeKeuanganModal()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-300 transition">Batal</button>
+                    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="bansosModal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="bansosModalTitle" class="text-xl font-bold text-gray-800">Tambah Bantuan</h3>
+                <button onclick="closeBansosModal()" class="text-gray-500 hover:text-gray-800"><i class="fa-solid fa-xmark fa-lg"></i></button>
+            </div>
+            <form id="bansosForm" class="space-y-4">
+                <input type="hidden" id="bansosId">
+                <select id="bansosNamaPenerima" required class="w-full p-2 border border-gray-300 rounded-lg">
+                    <option value="">Pilih Nama Penerima</option>
+                    </select>
+                <input type="text" id="bansosJenis" placeholder="Jenis Bantuan" required class="w-full p-2 border border-gray-300 rounded-lg">
+                <input type="text" id="bansosStatus" placeholder="Status (Diajukan/Diterima/Ditolak)" required class="w-full p-2 border border-gray-300 rounded-lg">
+                <div class="mt-6 flex justify-end space-x-2">
+                    <button type="button" onclick="closeBansosModal()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-300 transition">Batal</button>
+                    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="pengaduanModal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="pengaduanModalTitle" class="text-xl font-bold text-gray-800">Tambah Pengaduan</h3>
+                <button onclick="closePengaduanModal()" class="text-gray-500 hover:text-gray-800"><i class="fa-solid fa-xmark fa-lg"></i></button>
+            </div>
+            <form id="pengaduanForm" class="space-y-4">
+                <input type="hidden" id="pengaduanId">
+                <input type="text" id="pengaduanNamaPelapor" placeholder="Nama Pelapor" required class="w-full p-2 border border-gray-300 rounded-lg">
+                <input type="text" id="pengaduanJudul" placeholder="Judul Pengaduan" required class="w-full p-2 border border-gray-300 rounded-lg">
+                <textarea id="pengaduanDeskripsi" placeholder="Deskripsi" required class="w-full p-2 border border-gray-300 rounded-lg"></textarea>
+                <select id="pengaduanStatus" required class="w-full p-2 border border-gray-300 rounded-lg">
+                    <option value="Diajukan">Diajukan</option>
+                    <option value="Proses">Proses</option>
+                    <option value="Selesai">Selesai</option>
+                </select>
+                <div class="mt-6 flex justify-end space-x-2">
+                    <button type="button" onclick="closePengaduanModal()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-300 transition">Batal</button>
+                    <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="confirmationModal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full text-center">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Konfirmasi</h3>
+            <p class="text-gray-600 mb-6" id="confirmationMessage">Apakah Anda yakin ingin menghapus data ini?</p>
+            <div class="flex justify-center space-x-4">
+                <button onclick="performDeletion()" class="bg-red-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-red-700 transition">Ya</button>
+                <button onclick="closeConfirmationModal()" class="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:bg-gray-300 transition">Tidak</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="logDetailModal" class="log-detail-modal">
+        <div class="log-detail-modal-content">
+            <span class="close-button" onclick="closeLogDetailModal()">&times;</span>
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">Detail Aktivitas Log</h3>
+            <pre id="logDetailContent" class="bg-gray-100 p-4 rounded-md text-sm overflow-x-auto"></pre>
+        </div>
+    </div>
+
+    <script>
+        // =======================================================
+        // STATE DAN DATA LOKAL (PENGGANTI DATABASE)
+        // =======================================================
+        
+        // Objek state pusat untuk mengelola status aplikasi
+        const state = {
+            // Peran awal adalah 'guest', bukan 'user' atau 'admin'
+            userRole: 'guest',
+            currentView: 'dashboard',
+            pendudukData: JSON.parse(localStorage.getItem('pendudukData')) || [
+                { id: '1', nik: '1234567890123456', kk: '1234567890', nama: 'Budi Santoso', usia: 35, pekerjaan: 'Petani', pendidikan: 'SMA', status_kawin: 'Kawin', riwayat_domisili: 'Jl. Melati No. 1' },
+                { id: '2', nik: '6543210987654321', kk: '0987654321', nama: 'Siti Aminah', usia: 28, pekerjaan: 'Ibu Rumah Tangga', pendidikan: 'SMP', status_kawin: 'Kawin', riwayat_domisili: 'Jl. Kenanga No. 5' },
+                { id: '3', nik: '9876543210987654', kk: '1122334455', nama: 'Joko Prabowo', usia: 45, pekerjaan: 'Pedagang', pendidikan: 'SD', status_kawin: 'Kawin', riwayat_domisili: 'Jl. Mawar No. 3' }
+            ],
+            asetData: JSON.parse(localStorage.getItem('asetData')) || [
+                { id: '1', nama_aset: 'Motor Dinas', jumlah: 2, kondisi: 'Baik', lokasi: 'Kantor Desa' },
+                { id: '2', nama_aset: 'Laptop', jumlah: 5, kondisi: 'Baik', lokasi: 'Kantor Desa' },
+                { id: '3', nama_aset: 'Tractor', jumlah: 1, kondisi: 'Rusak', lokasi: 'Gudang' },
+            ],
+            pembangunanData: JSON.parse(localStorage.getItem('pembangunanData')) || [
+                { id: '1', nama_proyek: 'Perbaikan Jalan Raya', status: 'Proses', anggaran: 50000000 },
+                { id: '2', nama_proyek: 'Pembangunan Posyandu', status: 'Selesai', anggaran: 20000000 },
+            ],
+            keuanganData: JSON.parse(localStorage.getItem('keuanganData')) || [
+                { id: '1', tipe: 'pemasukan', deskripsi: 'Dana Desa Tahap 1', jumlah: 100000000 },
+                { id: '2', tipe: 'pengeluaran', deskripsi: 'Gaji Perangkat Desa', jumlah: 15000000 },
+                { id: '3', tipe: 'pemasukan', deskripsi: 'Pajak Bumi Bangunan', jumlah: 50000000 },
+                { id: '4', tipe: 'pengeluaran', deskripsi: 'Pembelian Aset', jumlah: 35000000 },
+            ],
+            bansosData: JSON.parse(localStorage.getItem('bansosData')) || [
+                // Store recipientId instead of nama_penerima directly
+                { id: '1', recipientId: '2', jenis_bantuan: 'Beras', status: 'Diterima' }, // Siti Aminah
+                { id: '2', recipientId: '1', jenis_bantuan: 'Uang Tunai', status: 'Diajukan' }, // Budi Santoso
+            ],
+            pengaduanData: JSON.parse(localStorage.getItem('pengaduanData')) || [
+                { id: '1', nama_pelapor: 'Dedi K', judul_pengaduan: 'Jalan Rusak', deskripsi: 'Jalan di gang buntu banyak lubang', status: 'Proses' },
+                { id: '2', nama_pelapor: 'Evi S', judul_pengaduan: 'Lampu Penerangan Mati', deskripsi: 'Lampu di jalan utama mati total sudah 2 hari', status: 'Diajukan' },
+            ],
+            // NEW ADDITION: Aktivitas Log
+            activityLogs: JSON.parse(localStorage.getItem('activityLogs')) || [],
+        };
+        
+        const loginScreen = document.getElementById('login-screen');
+        const appInterface = document.getElementById('app-interface');
+        const confirmationModal = document.getElementById('confirmationModal');
+        const logDetailModal = document.getElementById('logDetailModal'); // NEW ADDITION
+        let actionToDelete = null;
+        const ADMIN_PASSWORD = 'admin'; // Kata sandi admin sederhana
+
+        // NEW ADDITION: Fungsi untuk menyimpan state ke localStorage
+        function saveStateToLocalStorage() {
+            localStorage.setItem('pendudukData', JSON.stringify(state.pendudukData));
+            localStorage.setItem('asetData', JSON.stringify(state.asetData));
+            localStorage.setItem('pembangunanData', JSON.stringify(state.pembangunanData));
+            localStorage.setItem('keuanganData', JSON.stringify(state.keuanganData));
+            localStorage.setItem('bansosData', JSON.stringify(state.bansosData));
+            localStorage.setItem('pengaduanData', JSON.stringify(state.pengaduanData));
+            localStorage.setItem('activityLogs', JSON.stringify(state.activityLogs));
+        }
+
+        // NEW ADDITION: Fungsi untuk mencatat aktivitas
+        function recordActivity(module, actionType, recordId, oldValue, newValue, description, status) {
+            const user = state.userRole === 'admin' ? 'admin_desa' : 'guest';
+            const timestamp = new Date().toLocaleString('id-ID', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const ipAddress = '127.0.0.1'; // Simulasi IP Address
+
+            const logEntry = {
+                timestamp,
+                userId: user === 'admin_desa' ? 'ADMIN001' : 'GUEST001', // Contoh ID
+                username: user,
+                module,
+                actionType,
+                recordId,
+                oldValue: oldValue ? JSON.parse(JSON.stringify(oldValue)) : null, // Deep copy to prevent mutation
+                newValue: newValue ? JSON.parse(JSON.stringify(newValue)) : null, // Deep copy
+                description,
+                ipAddress,
+                status
+            };
+            state.activityLogs.unshift(logEntry); // Tambahkan ke awal array (terbaru di atas)
+            saveStateToLocalStorage();
+        }
+        
+        // =======================================================
+        // FUNGSI UTAMA UNTUK MENGELOLA TAMPILAN
+        // =======================================================
+        
+        const renderUI = () => {
+            // Mengatur visibilitas konten dan tombol navigasi
+            document.querySelectorAll('.content').forEach(el => el.classList.add('hidden'));
+            const currentContent = document.getElementById(`${state.currentView}-content`);
+            if (currentContent) currentContent.classList.remove('hidden');
+
+            document.querySelectorAll('.nav-item').forEach(button => {
+                button.classList.remove('active');
+            });
+            const navButtonId = `nav${state.currentView.charAt(0).toUpperCase() + state.currentView.slice(1)}`;
+            const navButton = document.getElementById(navButtonId);
+            if (navButton) navButton.classList.add('active');
+
+            // Mengatur visibilitas kontrol admin
+            const adminControls = document.querySelectorAll('#penduduk-admin-controls, #aset-admin-controls, #pembangunan-admin-controls, #keuangan-admin-controls, #bansos-admin-controls, #pengaduan-admin-controls');
+            if (state.userRole === 'admin') {
+                adminControls.forEach(control => control.classList.remove('hidden'));
+                document.getElementById('currentRoleDisplay').textContent = 'Admin';
+                document.getElementById('admin-login-logout-button').innerHTML = `
+                    <button onclick="logout()" class="w-full bg-red-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-red-700 transition flex items-center space-x-2 justify-center">
+                        <i class="fa-solid fa-right-from-bracket"></i><span>Logout</span>
+                    </button>
+                `;
+            } else {
+                adminControls.forEach(control => control.classList.add('hidden'));
+                document.getElementById('currentRoleDisplay').textContent = 'Masyarakat Umum';
+                document.getElementById('admin-login-logout-button').innerHTML = `
+                    <button onclick="openLoginScreen()" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-indigo-700 transition flex items-center space-x-2 justify-center">
+                        <i class="fa-solid fa-user-shield"></i><span>Masuk sebagai Admin</span>
+                    </button>
+                `;
+            }
+
+            // Memperbarui tabel dan dashboard berdasarkan data dari state
+            if (state.currentView === 'population') {
+                renderPendudukTable(state.pendudukData);
+            } else if (state.currentView === 'assets') {
+                renderAsetDesaTable(state.asetData);
+            } else if (state.currentView === 'development') {
+                renderPembangunanTable(state.pembangunanData);
+            } else if (state.currentView === 'finances') {
+                renderKeuanganTable(state.keuanganData);
+            } else if (state.currentView === 'bansos') {
+                renderBansosTable(state.bansosData);
+                populateBansosRecipientDropdown(); // Call this when bansos view is active
+            } else if (state.currentView === 'complaints') {
+                renderPengaduanTable(state.pengaduanData);
+            } else if (state.currentView === 'activityLogs') { // NEW ADDITION: Render log aktivitas
+                applyLogFilters(); // Muat log saat pertama kali masuk ke menu laporan
+            }
+            
+            updateDashboardCards();
+        };
+
+        // Fungsi untuk menampilkan modal login admin
+        window.openLoginScreen = () => {
+            loginScreen.classList.remove('hidden');
+            document.getElementById('login-error').classList.add('hidden');
+            document.getElementById('adminPasswordInput').value = '';
+        };
+
+        // Fungsi untuk menutup modal login admin
+        window.closeLoginScreen = () => {
+            loginScreen.classList.add('hidden');
+        };
+
+        // Fungsi untuk login admin
+        window.loginAdmin = () => {
+            const password = document.getElementById('adminPasswordInput').value;
+            if (password === ADMIN_PASSWORD) {
+                state.userRole = 'admin';
+                recordActivity('Sistem', 'LOGIN', null, null, { role: 'admin' }, 'Login sebagai Admin', 'SUCCESS'); // NEW ADDITION: Log Login
+                closeLoginScreen();
+                renderUI();
+            } else {
+                document.getElementById('login-error').classList.remove('hidden');
+                recordActivity('Sistem', 'LOGIN', null, null, { role: 'admin' }, 'Gagal login sebagai Admin (password salah)', 'FAILED'); // NEW ADDITION: Log Gagal Login
+            }
+        };
+
+        // Fungsi logout (kembali ke peran 'guest')
+        window.logout = () => {
+            recordActivity('Sistem', 'LOGOUT', null, { role: 'admin' }, null, 'Logout dari Admin', 'SUCCESS'); // NEW ADDITION: Log Logout
+            state.userRole = 'guest';
+            renderUI();
+        };
+        
+        // Fungsi untuk mengganti tampilan
+        window.changeView = (viewId) => {
+            state.currentView = viewId;
+            renderUI();
+        };
+
+        // =======================================================
+        // LOGIC TAMPILAN DASHBOARD
+        // =======================================================
+        const updateDashboardCards = () => {
+            const dashboardContainer = document.getElementById('dashboard-cards');
+            dashboardContainer.innerHTML = ''; // Kosongkan container
+
+            // Jumlah Penduduk
+            dashboardContainer.innerHTML += `
+                <div class="card bg-white p-6 rounded-xl shadow-md flex items-center space-x-4">
+                    <div class="p-3 bg-indigo-100 rounded-full text-indigo-600">
+                        <i class="fa-solid fa-users fa-2x"></i>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Jumlah Penduduk</p>
+                        <p class="text-2xl font-bold text-gray-800">${state.pendudukData.length}</p>
+                    </div>
+                </div>
+            `;
+
+            // Total Aset
+            const totalAsetJumlah = state.asetData.reduce((sum, aset) => sum + aset.jumlah, 0); // Menghitung total jumlah aset
+            dashboardContainer.innerHTML += `
+                <div class="card bg-white p-6 rounded-xl shadow-md flex items-center space-x-4">
+                    <div class="p-3 bg-green-100 rounded-full text-green-600">
+                        <i class="fa-solid fa-building-flag fa-2x"></i>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Total Aset Desa</p>
+                        <p class="text-2xl font-bold text-gray-800">${totalAsetJumlah} unit</p> <!-- Menampilkan total unit aset -->
+                    </div>
+                </div>
+            `;
+
+            // Proyek Pembangunan (Selesai/Total)
+            const completedProjects = state.pembangunanData.filter(p => p.status === 'Selesai').length;
+            dashboardContainer.innerHTML += `
+                <div class="card bg-white p-6 rounded-xl shadow-md flex items-center space-x-4">
+                    <div class="p-3 bg-blue-100 rounded-full text-blue-600">
+                        <i class="fa-solid fa-road fa-2x"></i>
+                    </div>
+                    <div>
+                        <p class="text-gray-500">Proyek Pembangunan</p>
+                        <p class="text-2xl font-bold text-gray-800">${completedProjects} / ${state.pembangunanData.length}</p>
+                    </div>
+                </div>
+            `;
+
+            // Ringkasan Keuangan
+            const totalPemasukan = state.keuanganData.filter(t => t.tipe === 'pemasukan').reduce((sum, t) => sum + t.jumlah, 0);
+            const totalPengeluaran = state.keuanganData.filter(t => t.tipe === 'pengeluaran').reduce((sum, t) => sum + t.jumlah, 0);
+            const saldoAkhir = totalPemasukan - totalPengeluaran;
+
+            document.getElementById('pemasukan-total').textContent = totalPemasukan.toLocaleString('id-ID');
+            document.getElementById('pengeluaran-total').textContent = totalPengeluaran.toLocaleString('id-ID');
+            document.getElementById('saldo-total').textContent = saldoAkhir.toLocaleString('id-ID');
+        };
+
+        // =======================================================
+        // LOGIC MODUL PENDUDUK
+        // =======================================================
+        const renderPendudukTable = (data) => {
+            const tableContainer = document.getElementById('penduduk-table-container');
+            if (data.length === 0) {
+                tableContainer.innerHTML = '<p class="text-gray-500 p-4">Tidak ada data penduduk.</p>';
+                return;
+            }
+
+            let tableHTML = `
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NIK</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usia</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pekerjaan</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status Kawin</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+            `;
+
+            data.forEach(item => {
+                tableHTML += `
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">${item.nik}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${item.nama}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${item.usia}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${item.pekerjaan}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${item.status_kawin}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="viewPenduduk('${item.id}')" class="text-blue-600 hover:text-blue-900 mr-2"><i class="fa-solid fa-eye"></i></button>
+                            <button onclick="editPenduduk('${item.id}')" class="text-indigo-600 hover:text-indigo-900 mr-2 ${state.userRole === 'admin' ? '' : 'hidden'}"><i class="fa-solid fa-edit"></i></button>
+                            <button onclick="confirmDeletion('penduduk', '${item.id}')" class="text-red-600 hover:text-red-900 ${state.userRole === 'admin' ? '' : 'hidden'}"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tableHTML += `</tbody></table>`;
+            tableContainer.innerHTML = tableHTML;
+        };
+
+        const openPendudukModal = (item = {}) => {
+            document.getElementById('pendudukModalTitle').textContent = item.id ? 'Edit Data Penduduk' : 'Tambah Penduduk';
+            document.getElementById('pendudukId').value = item.id || '';
+            document.getElementById('nik').value = item.nik || '';
+            document.getElementById('kk').value = item.kk || '';
+            document.getElementById('nama').value = item.nama || '';
+            document.getElementById('usia').value = item.usia || '';
+            document.getElementById('pekerjaan').value = item.pekerjaan || '';
+            document.getElementById('pendidikan').value = item.pendidikan || '';
+            document.getElementById('status_kawin').value = item.status_kawin || '';
+            document.getElementById('riwayat_domisili').value = item.riwayat_domisili || '';
+            document.getElementById('pendudukModal').classList.remove('hidden');
+        };
+
+        const closePendudukModal = () => {
+            document.getElementById('pendudukModal').classList.add('hidden');
+            document.getElementById('pendudukForm').reset();
+        };
+
+        const viewPenduduk = (id) => {
+            const item = state.pendudukData.find(p => p.id === id);
+            if (item) {
+                alert(`Detail Penduduk:\nNIK: ${item.nik}\nNama: ${item.nama}\nUsia: ${item.usia}\nPekerjaan: ${item.pekerjaan}\nPendidikan: ${item.pendidikan}\nStatus Kawin: ${item.status_kawin}\nRiwayat Domisili: ${item.riwayat_domisili || '-'}`);
+                recordActivity('Penduduk', 'VIEW', id, null, item, `Melihat detail penduduk: ${item.nama}`, 'SUCCESS'); // NEW ADDITION: Log View
+            }
+        };
+
+        const editPenduduk = (id) => {
+            if (state.userRole !== 'admin') return;
+            const item = state.pendudukData.find(p => p.id === id);
+            if (item) {
+                openPendudukModal(item);
+            }
+        };
+
+        document.getElementById('pendudukForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = document.getElementById('pendudukId').value;
+            const newData = {
+                nik: document.getElementById('nik').value,
+                kk: document.getElementById('kk').value,
+                nama: document.getElementById('nama').value,
+                usia: parseInt(document.getElementById('usia').value),
+                pekerjaan: document.getElementById('pekerjaan').value,
+                pendidikan: document.getElementById('pendidikan').value,
+                status_kawin: document.getElementById('status_kawin').value,
+                riwayat_domisili: document.getElementById('riwayat_domisili').value
+            };
+
+            if (id) {
+                // Update
+                const index = state.pendudukData.findIndex(p => p.id === id);
+                if (index !== -1) {
+                    const oldData = { ...state.pendudukData[index] }; // Copy old data
+                    state.pendudukData[index] = { ...state.pendudukData[index], ...newData };
+                    recordActivity('Penduduk', 'UPDATE', id, oldData, state.pendudukData[index], `Mengubah data penduduk: ${newData.nama}`, 'SUCCESS'); // NEW ADDITION: Log Update
+                }
+            } else {
+                // Create
+                const newId = (state.pendudukData.length > 0 ? Math.max(...state.pendudukData.map(p => parseInt(p.id))) + 1 : 1).toString();
+                const newItem = { id: newId, ...newData };
+                state.pendudukData.push(newItem);
+                recordActivity('Penduduk', 'CREATE', newId, null, newItem, `Menambah penduduk baru: ${newItem.nama}`, 'SUCCESS'); // NEW ADDITION: Log Create
+            }
+            saveStateToLocalStorage(); // Save after any modification
+            closePendudukModal();
+            renderUI(); // Re-render table and dashboard
+        });
+
+        // =======================================================
+        // LOGIC MODUL ASET DESA
+        // =======================================================
+        const renderAsetDesaTable = (data) => {
+            const tableContainer = document.getElementById('aset-table-container');
+            if (data.length === 0) {
+                tableContainer.innerHTML = '<p class="text-gray-500 p-4">Tidak ada data aset.</p>';
+                return;
+            }
+
+            let tableHTML = `
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Aset</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kondisi</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lokasi</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+            `;
+
+            data.forEach(item => {
+                tableHTML += `
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">${item.nama_aset}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${item.jumlah}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${item.kondisi}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${item.lokasi}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="editAset('${item.id}')" class="text-indigo-600 hover:text-indigo-900 mr-2 ${state.userRole === 'admin' ? '' : 'hidden'}"><i class="fa-solid fa-edit"></i></button>
+                            <button onclick="confirmDeletion('aset', '${item.id}')" class="text-red-600 hover:text-red-900 ${state.userRole === 'admin' ? '' : 'hidden'}"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tableHTML += `</tbody></table>`;
+            tableContainer.innerHTML = tableHTML;
+        };
+
+        const openAsetModal = (item = {}) => {
+            document.getElementById('asetModalTitle').textContent = item.id ? 'Edit Data Aset' : 'Tambah Aset';
+            document.getElementById('asetId').value = item.id || '';
+            document.getElementById('nama_aset').value = item.nama_aset || '';
+            document.getElementById('jumlah').value = item.jumlah || '';
+            document.getElementById('kondisi').value = item.kondisi || '';
+            document.getElementById('lokasi').value = item.lokasi || '';
+            document.getElementById('asetModal').classList.remove('hidden');
+        };
+
+        const closeAsetModal = () => {
+            document.getElementById('asetModal').classList.add('hidden');
+            document.getElementById('asetForm').reset();
+        };
+
+        const editAset = (id) => {
+            if (state.userRole !== 'admin') return;
+            const item = state.asetData.find(a => a.id === id);
+            if (item) {
+                openAsetModal(item);
+            }
+        };
+
+        document.getElementById('asetForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = document.getElementById('asetId').value;
+            const newData = {
+                nama_aset: document.getElementById('nama_aset').value,
+                jumlah: parseInt(document.getElementById('jumlah').value),
+                kondisi: document.getElementById('kondisi').value,
+                lokasi: document.getElementById('lokasi').value
+            };
+
+            if (id) {
+                // Update
+                const index = state.asetData.findIndex(a => a.id === id);
+                if (index !== -1) {
+                    const oldData = { ...state.asetData[index] };
+                    state.asetData[index] = { ...state.asetData[index], ...newData };
+                    recordActivity('Aset Desa', 'UPDATE', id, oldData, state.asetData[index], `Mengubah aset: ${newData.nama_aset}`, 'SUCCESS');
+                }
+            } else {
+                // Create
+                const newId = (state.asetData.length > 0 ? Math.max(...state.asetData.map(a => parseInt(a.id))) + 1 : 1).toString();
+                const newItem = { id: newId, ...newData };
+                state.asetData.push(newItem);
+                recordActivity('Aset Desa', 'CREATE', newId, null, newItem, `Menambah aset baru: ${newItem.nama_aset}`, 'SUCCESS');
+            }
+            saveStateToLocalStorage(); // Save after any modification
+            closeAsetModal();
+            renderUI(); // Re-render table and dashboard
+        });
+
+        // =======================================================
+        // LOGIC MODUL PEMBANGUNAN
+        // =======================================================
+        const renderPembangunanTable = (data) => {
+            const tableContainer = document.getElementById('pembangunan-table-container');
+            if (data.length === 0) {
+                tableContainer.innerHTML = '<p class="text-gray-500 p-4">Tidak ada data pembangunan.</p>';
+                return;
+            }
+
+            let tableHTML = `
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Proyek</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Anggaran</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+            `;
+
+            data.forEach(item => {
+                tableHTML += `
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">${item.nama_proyek}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${item.status}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">Rp ${item.anggaran.toLocaleString('id-ID')}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="editPembangunan('${item.id}')" class="text-indigo-600 hover:text-indigo-900 mr-2 ${state.userRole === 'admin' ? '' : 'hidden'}"><i class="fa-solid fa-edit"></i></button>
+                            <button onclick="confirmDeletion('pembangunan', '${item.id}')" class="text-red-600 hover:text-red-900 ${state.userRole === 'admin' ? '' : 'hidden'}"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tableHTML += `</tbody></table>`;
+            tableContainer.innerHTML = tableHTML;
+        };
+
+        const openPembangunanModal = (item = {}) => {
+            document.getElementById('pembangunanModalTitle').textContent = item.id ? 'Edit Data Pembangunan' : 'Tambah Pembangunan';
+            document.getElementById('pembangunanId').value = item.id || '';
+            document.getElementById('pembangunanNama').value = item.nama_proyek || '';
+            document.getElementById('pembangunanStatus').value = item.status || '';
+            document.getElementById('pembangunanAnggaran').value = item.anggaran || '';
+            document.getElementById('pembangunanModal').classList.remove('hidden');
+        };
+
+        const closePembangunanModal = () => {
+            document.getElementById('pembangunanModal').classList.add('hidden');
+            document.getElementById('pembangunanForm').reset();
+        };
+
+        const editPembangunan = (id) => {
+            if (state.userRole !== 'admin') return;
+            const item = state.pembangunanData.find(p => p.id === id);
+            if (item) {
+                openPembangunanModal(item);
+            }
+        };
+
+        document.getElementById('pembangunanForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = document.getElementById('pembangunanId').value;
+            const newData = {
+                nama_proyek: document.getElementById('pembangunanNama').value,
+                status: document.getElementById('pembangunanStatus').value,
+                anggaran: parseInt(document.getElementById('pembangunanAnggaran').value)
+            };
+
+            if (id) {
+                // Update
+                const index = state.pembangunanData.findIndex(p => p.id === id);
+                if (index !== -1) {
+                    const oldData = { ...state.pembangunanData[index] };
+                    state.pembangunanData[index] = { ...state.pembangunanData[index], ...newData };
+                    recordActivity('Pembangunan', 'UPDATE', id, oldData, state.pembangunanData[index], `Mengubah proyek: ${newData.nama_proyek}`, 'SUCCESS');
+                }
+            } else {
+                // Create
+                const newId = (state.pembangunanData.length > 0 ? Math.max(...state.pembangunanData.map(p => parseInt(p.id))) + 1 : 1).toString();
+                const newItem = { id: newId, ...newData };
+                state.pembangunanData.push(newItem);
+                recordActivity('Pembangunan', 'CREATE', newId, null, newItem, `Menambah proyek baru: ${newItem.nama_proyek}`, 'SUCCESS');
+            }
+            saveStateToLocalStorage(); // Save after any modification
+            closePembangunanModal();
+            renderUI(); // Re-render table and dashboard
+        });
+
+        // =======================================================
+        // LOGIC MODUL KEUANGAN
+        // =======================================================
+        const renderKeuanganTable = (data) => {
+            const tableContainer = document.getElementById('keuangan-table-container');
+            if (data.length === 0) {
+                tableContainer.innerHTML = '<p class="text-gray-500 p-4">Tidak ada data keuangan.</p>';
+                return;
+            }
+
+            let tableHTML = `
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipe</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deskripsi</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+            `;
+
+            data.forEach(item => {
+                tableHTML += `
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">${item.tipe === 'pemasukan' ? 'Pemasukan' : 'Pengeluaran'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${item.deskripsi}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">Rp ${item.jumlah.toLocaleString('id-ID')}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="editKeuangan('${item.id}')" class="text-indigo-600 hover:text-indigo-900 mr-2 ${state.userRole === 'admin' ? '' : 'hidden'}"><i class="fa-solid fa-edit"></i></button>
+                            <button onclick="confirmDeletion('keuangan', '${item.id}')" class="text-red-600 hover:text-red-900 ${state.userRole === 'admin' ? '' : 'hidden'}"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tableHTML += `</tbody></table>`;
+            tableContainer.innerHTML = tableHTML;
+        };
+
+        const openKeuanganModal = (item = {}) => {
+            document.getElementById('keuanganModalTitle').textContent = item.id ? 'Edit Transaksi Keuangan' : 'Tambah Transaksi';
+            document.getElementById('keuanganId').value = item.id || '';
+            document.getElementById('keuanganTipe').value = item.tipe || '';
+            document.getElementById('keuanganDeskripsi').value = item.deskripsi || '';
+            document.getElementById('keuanganJumlah').value = item.jumlah || '';
+            document.getElementById('keuanganModal').classList.remove('hidden');
+        };
+
+        const closeKeuanganModal = () => {
+            document.getElementById('keuanganModal').classList.add('hidden');
+            document.getElementById('keuanganForm').reset();
+        };
+
+        const editKeuangan = (id) => {
+            if (state.userRole !== 'admin') return;
+            const item = state.keuanganData.find(k => k.id === id);
+            if (item) {
+                openKeuanganModal(item);
+            }
+        };
+
+        document.getElementById('keuanganForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = document.getElementById('keuanganId').value;
+            const newData = {
+                tipe: document.getElementById('keuanganTipe').value,
+                deskripsi: document.getElementById('keuanganDeskripsi').value,
+                jumlah: parseInt(document.getElementById('keuanganJumlah').value)
+            };
+
+            if (id) {
+                // Update
+                const index = state.keuanganData.findIndex(k => k.id === id);
+                if (index !== -1) {
+                    const oldData = { ...state.keuanganData[index] };
+                    state.keuanganData[index] = { ...state.keuanganData[index], ...newData };
+                    recordActivity('Keuangan', 'UPDATE', id, oldData, state.keuanganData[index], `Mengubah transaksi: ${newData.deskripsi}`, 'SUCCESS');
+                }
+            } else {
+                // Create
+                const newId = (state.keuanganData.length > 0 ? Math.max(...state.keuanganData.map(k => parseInt(k.id))) + 1 : 1).toString();
+                const newItem = { id: newId, ...newData };
+                state.keuanganData.push(newItem);
+                recordActivity('Keuangan', 'CREATE', newId, null, newItem, `Menambah transaksi: ${newItem.deskripsi}`, 'SUCCESS');
+            }
+            saveStateToLocalStorage(); // Save after any modification
+            closeKeuanganModal();
+            renderUI(); // Re-render table and dashboard
+        });
+
+        // =======================================================
+        // LOGIC MODUL BANTUAN SOSIAL
+        // =======================================================
+        const populateBansosRecipientDropdown = () => {
+            const dropdown = document.getElementById('bansosNamaPenerima');
+            dropdown.innerHTML = '<option value="">Pilih Nama Penerima</option>'; // Reset
+            state.pendudukData.forEach(penduduk => {
+                const option = document.createElement('option');
+                option.value = penduduk.id; // Store ID, not name
+                option.textContent = penduduk.nama;
+                dropdown.appendChild(option);
+            });
+        };
+
+        const getPendudukNameById = (id) => {
+            const penduduk = state.pendudukData.find(p => p.id === id);
+            return penduduk ? penduduk.nama : 'Tidak Ditemukan';
+        };
+
+        const renderBansosTable = (data) => {
+            const tableContainer = document.getElementById('bansos-table-container');
+            if (data.length === 0) {
+                tableContainer.innerHTML = '<p class="text-gray-500 p-4">Tidak ada data bantuan sosial.</p>';
+                return;
+            }
+
+            let tableHTML = `
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Penerima</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis Bantuan</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+            `;
+
+            data.forEach(item => {
+                tableHTML += `
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">${getPendudukNameById(item.recipientId)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${item.jenis_bantuan}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${item.status}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="editBansos('${item.id}')" class="text-indigo-600 hover:text-indigo-900 mr-2 ${state.userRole === 'admin' ? '' : 'hidden'}"><i class="fa-solid fa-edit"></i></button>
+                            <button onclick="confirmDeletion('bansos', '${item.id}')" class="text-red-600 hover:text-red-900 ${state.userRole === 'admin' ? '' : 'hidden'}"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tableHTML += `</tbody></table>`;
+            tableContainer.innerHTML = tableHTML;
+        };
+
+        const openBansosModal = (item = {}) => {
+            document.getElementById('bansosModalTitle').textContent = item.id ? 'Edit Data Bantuan' : 'Tambah Bantuan';
+            document.getElementById('bansosId').value = item.id || '';
+            document.getElementById('bansosNamaPenerima').value = item.recipientId || ''; // Set value to recipientId
+            document.getElementById('bansosJenis').value = item.jenis_bantuan || '';
+            document.getElementById('bansosStatus').value = item.status || '';
+            populateBansosRecipientDropdown(); // Ensure dropdown is populated before showing modal
+            document.getElementById('bansosModal').classList.remove('hidden');
+        };
+
+        const closeBansosModal = () => {
+            document.getElementById('bansosModal').classList.add('hidden');
+            document.getElementById('bansosForm').reset();
+        };
+
+        const editBansos = (id) => {
+            if (state.userRole !== 'admin') return;
+            const item = state.bansosData.find(b => b.id === id);
+            if (item) {
+                openBansosModal(item);
+            }
+        };
+
+        document.getElementById('bansosForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = document.getElementById('bansosId').value;
+            const newData = {
+                recipientId: document.getElementById('bansosNamaPenerima').value, // Get recipient ID
+                jenis_bantuan: document.getElementById('bansosJenis').value,
+                status: document.getElementById('bansosStatus').value
+            };
+
+            const recipientName = getPendudukNameById(newData.recipientId);
+
+            if (id) {
+                // Update
+                const index = state.bansosData.findIndex(b => b.id === id);
+                if (index !== -1) {
+                    const oldData = { ...state.bansosData[index] }; // Include old name for log
+                    state.bansosData[index] = { ...state.bansosData[index], ...newData };
+                    recordActivity('Bantuan Sosial', 'UPDATE', id, oldData, { ...state.bansosData[index], nama_penerima_baru: recipientName }, `Mengubah bantuan untuk: ${recipientName}`, 'SUCCESS');
+                }
+            } else {
+                // Create
+                const newId = (state.bansosData.length > 0 ? Math.max(...state.bansosData.map(b => parseInt(b.id))) + 1 : 1).toString();
+                const newItem = { id: newId, ...newData };
+                state.bansosData.push(newItem);
+                recordActivity('Bantuan Sosial', 'CREATE', newId, null, { ...newItem, nama_penerima: recipientName }, `Menambah bantuan untuk: ${recipientName}`, 'SUCCESS');
+            }
+            saveStateToLocalStorage(); // Save after any modification
+            closeBansosModal();
+            renderUI(); // Re-render table and dashboard
+        });
+
+        // =======================================================
+        // LOGIC MODUL PENGADUAN
+        // =======================================================
+        const renderPengaduanTable = (data) => {
+            const tableContainer = document.getElementById('pengaduan-table-container');
+            if (data.length === 0) {
+                tableContainer.innerHTML = '<p class="text-gray-500 p-4">Tidak ada data pengaduan.</p>';
+                return;
+            }
+
+            let tableHTML = `
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Pelapor</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Judul</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deskripsi</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+            `;
+
+            data.forEach(item => {
+                tableHTML += `
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">${item.nama_pelapor}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${item.judul_pengaduan}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${item.deskripsi}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${item.status}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="editPengaduan('${item.id}')" class="text-indigo-600 hover:text-indigo-900 mr-2 ${state.userRole === 'admin' ? '' : 'hidden'}"><i class="fa-solid fa-edit"></i></button>
+                            <button onclick="confirmDeletion('pengaduan', '${item.id}')" class="text-red-600 hover:text-red-900 ${state.userRole === 'admin' ? '' : 'hidden'}"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tableHTML += `</tbody></table>`;
+            tableContainer.innerHTML = tableHTML;
+        };
+
+        const openPengaduanModal = (item = {}) => {
+            document.getElementById('pengaduanModalTitle').textContent = item.id ? 'Edit Data Pengaduan' : 'Tambah Pengaduan';
+            document.getElementById('pengaduanId').value = item.id || '';
+            document.getElementById('pengaduanNamaPelapor').value = item.nama_pelapor || '';
+            document.getElementById('pengaduanJudul').value = item.judul_pengaduan || '';
+            document.getElementById('pengaduanDeskripsi').value = item.deskripsi || '';
+            document.getElementById('pengaduanStatus').value = item.status || 'Diajukan';
+            document.getElementById('pengaduanModal').classList.remove('hidden');
+        };
+
+        const closePengaduanModal = () => {
+            document.getElementById('pengaduanModal').classList.add('hidden');
+            document.getElementById('pengaduanForm').reset();
+        };
+
+        const editPengaduan = (id) => {
+            if (state.userRole !== 'admin') return;
+            const item = state.pengaduanData.find(p => p.id === id);
+            if (item) {
+                openPengaduanModal(item);
+            }
+        };
+
+        document.getElementById('pengaduanForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = document.getElementById('pengaduanId').value;
+            const newData = {
+                nama_pelapor: document.getElementById('pengaduanNamaPelapor').value,
+                judul_pengaduan: document.getElementById('pengaduanJudul').value,
+                deskripsi: document.getElementById('pengaduanDeskripsi').value,
+                status: document.getElementById('pengaduanStatus').value
+            };
+
+            if (id) {
+                // Update
+                const index = state.pengaduanData.findIndex(p => p.id === id);
+                if (index !== -1) {
+                    const oldData = { ...state.pengaduanData[index] };
+                    state.pengaduanData[index] = { ...state.pengaduanData[index], ...newData };
+                    recordActivity('Pengaduan', 'UPDATE', id, oldData, state.pengaduanData[index], `Mengubah pengaduan: ${newData.judul_pengaduan}`, 'SUCCESS');
+                }
+            } else {
+                // Create
+                const newId = (state.pengaduanData.length > 0 ? Math.max(...state.pengaduanData.map(p => parseInt(p.id))) + 1 : 1).toString();
+                const newItem = { id: newId, ...newData };
+                state.pengaduanData.push(newItem);
+                recordActivity('Pengaduan', 'CREATE', newId, null, newItem, `Menambah pengaduan: ${newItem.judul_pengaduan}`, 'SUCCESS');
+            }
+            saveStateToLocalStorage(); // Save after any modification
+            closePengaduanModal();
+            renderUI(); // Re-render table and dashboard
+        });
+
+
+        // =======================================================
+        // LOGIC CONFIRMATION MODAL
+        // =======================================================
+        window.confirmDeletion = (type, id) => {
+            actionToDelete = { type, id };
+            document.getElementById('confirmationMessage').textContent = `Apakah Anda yakin ingin menghapus data ${type} ini?`;
+            confirmationModal.classList.remove('hidden');
+        };
+
+        window.performDeletion = () => {
+            if (!actionToDelete) return;
+
+            const { type, id } = actionToDelete;
+            let success = false;
+            let deletedItem = null;
+
+            switch (type) {
+                case 'penduduk':
+                    const pendudukIndex = state.pendudukData.findIndex(p => p.id === id);
+                    if (pendudukIndex !== -1) {
+                        deletedItem = state.pendudukData.splice(pendudukIndex, 1)[0];
+                        success = true;
+                        // Hapus juga bansos terkait jika ada
+                        state.bansosData = state.bansosData.filter(b => b.recipientId !== id);
+                        recordActivity('Penduduk', 'DELETE', id, deletedItem, null, `Menghapus penduduk: ${deletedItem.nama}`, 'SUCCESS');
+                    }
+                    break;
+                case 'aset':
+                    const asetIndex = state.asetData.findIndex(a => a.id === id);
+                    if (asetIndex !== -1) {
+                        deletedItem = state.asetData.splice(asetIndex, 1)[0];
+                        success = true;
+                        recordActivity('Aset Desa', 'DELETE', id, deletedItem, null, `Menghapus aset: ${deletedItem.nama_aset}`, 'SUCCESS');
+                    }
+                    break;
+                case 'pembangunan':
+                    const pembangunanIndex = state.pembangunanData.findIndex(p => p.id === id);
+                    if (pembangunanIndex !== -1) {
+                        deletedItem = state.pembangunanData.splice(pembangunanIndex, 1)[0];
+                        success = true;
+                        recordActivity('Pembangunan', 'DELETE', id, deletedItem, null, `Menghapus proyek: ${deletedItem.nama_proyek}`, 'SUCCESS');
+                    }
+                    break;
+                case 'keuangan':
+                    const keuanganIndex = state.keuanganData.findIndex(k => k.id === id);
+                    if (keuanganIndex !== -1) {
+                        deletedItem = state.keuanganData.splice(keuanganIndex, 1)[0];
+                        success = true;
+                        recordActivity('Keuangan', 'DELETE', id, deletedItem, null, `Menghapus transaksi: ${deletedItem.deskripsi}`, 'SUCCESS');
+                    }
+                    break;
+                case 'bansos':
+                    const bansosIndex = state.bansosData.findIndex(b => b.id === id);
+                    if (bansosIndex !== -1) {
+                        deletedItem = state.bansosData.splice(bansosIndex, 1)[0];
+                        success = true;
+                        recordActivity('Bantuan Sosial', 'DELETE', id, deletedItem, null, `Menghapus bantuan untuk: ${getPendudukNameById(deletedItem.recipientId)}`, 'SUCCESS');
+                    }
+                    break;
+                case 'pengaduan':
+                    const pengaduanIndex = state.pengaduanData.findIndex(p => p.id === id);
+                    if (pengaduanIndex !== -1) {
+                        deletedItem = state.pengaduanData.splice(pengaduanIndex, 1)[0];
+                        success = true;
+                        recordActivity('Pengaduan', 'DELETE', id, deletedItem, null, `Menghapus pengaduan: ${deletedItem.judul_pengaduan}`, 'SUCCESS');
+                    }
+                    break;
+            }
+
+            if (success) {
+                saveStateToLocalStorage(); // Save after deletion
+                renderUI(); // Re-render UI to reflect changes
+            }
+            closeConfirmationModal();
+            actionToDelete = null; // Reset action
+        };
+
+        window.closeConfirmationModal = () => {
+            confirmationModal.classList.add('hidden');
+            actionToDelete = null;
+        };
+
+        // =======================================================
+        // NEW ADDITION: LOGIC MODUL LAPORAN AKTIVITAS
+        // =======================================================
+
+        const renderActivityLogsTable = (logsToDisplay) => {
+            const tableBody = document.getElementById('activityLogsTableBody');
+            tableBody.innerHTML = ''; // Clear existing rows
+
+            if (logsToDisplay.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="9" class="px-6 py-4 text-center text-gray-500">Tidak ada aktivitas yang cocok dengan filter.</td></tr>';
+                return;
+            }
+
+            logsToDisplay.forEach(log => {
+                const row = tableBody.insertRow();
+                row.insertCell().textContent = log.timestamp;
+                row.insertCell().textContent = log.username;
+                row.insertCell().textContent = log.module;
+                row.insertCell().textContent = log.actionType;
+                row.insertCell().textContent = log.recordId || '-';
+                row.insertCell().textContent = log.description;
+                row.insertCell().textContent = log.ipAddress;
+                row.insertCell().textContent = log.status;
+                
+                const detailCell = row.insertCell();
+                const detailButton = document.createElement('button');
+                detailButton.textContent = 'Lihat Detail';
+                detailButton.className = 'text-blue-600 hover:text-blue-900 text-sm font-medium';
+                detailButton.onclick = () => showLogDetailModal(log);
+                detailCell.appendChild(detailButton);
+            });
+        };
+
+        window.applyLogFilters = () => {
+            const startDate = document.getElementById('logStartDate').value;
+            const endDate = document.getElementById('logEndDate').value;
+            const userFilter = document.getElementById('logUserFilter').value;
+            const moduleFilter = document.getElementById('logModuleFilter').value;
+            const actionTypeFilter = document.getElementById('logActionTypeFilter').value;
+            const searchText = document.getElementById('logSearchText').value.toLowerCase();
+
+            let filteredLogs = state.activityLogs.filter(log => {
+                // Convert log timestamp (e.g., "06/08/2025, 13.49.00") to a Date object for comparison
+                const [datePart, timePart] = log.timestamp.split(', ');
+                const [day, month, year] = datePart.split('/');
+                const logDate = new Date(`${year}-${month}-${day}T${timePart}`);
+                
+                // Filter Tanggal
+                if (startDate && logDate < new Date(startDate)) return false;
+                if (endDate) {
+                    const endOfDay = new Date(endDate);
+                    endOfDay.setHours(23, 59, 59, 999); // Set to end of the selected day
+                    if (logDate > endOfDay) return false;
+                }
+
+                // Filter Pengguna
+                if (userFilter && log.username !== userFilter) return false;
+
+                // Filter Modul
+                if (moduleFilter && log.module !== moduleFilter) return false;
+
+                // Filter Tipe Aksi
+                if (actionTypeFilter && log.actionType !== actionTypeFilter) return false;
+
+                // Filter Teks Pencarian
+                if (searchText) {
+                    const descriptionMatch = log.description.toLowerCase().includes(searchText);
+                    const recordIdMatch = log.recordId ? String(log.recordId).toLowerCase().includes(searchText) : false;
+                    const oldValueMatch = log.oldValue ? JSON.stringify(log.oldValue).toLowerCase().includes(searchText) : false;
+                    const newValueMatch = log.newValue ? JSON.stringify(log.newValue).toLowerCase().includes(searchText) : false;
+                    
+                    if (!descriptionMatch && !recordIdMatch && !oldValueMatch && !newValueMatch) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+            renderActivityLogsTable(filteredLogs);
+        };
+
+        window.exportActivityLogsToExcel = () => {
+            const startDate = document.getElementById('logStartDate').value;
+            const endDate = document.getElementById('logEndDate').value;
+            const userFilter = document.getElementById('logUserFilter').value;
+            const moduleFilter = document.getElementById('logModuleFilter').value;
+            const actionTypeFilter = document.getElementById('logActionTypeFilter').value;
+            const searchText = document.getElementById('logSearchText').value.toLowerCase();
+
+            let logsToExport = state.activityLogs.filter(log => {
+                // Convert log timestamp (e.g., "06/08/2025, 13.49.00") to a Date object for comparison
+                const [datePart, timePart] = log.timestamp.split(', ');
+                const [day, month, year] = datePart.split('/');
+                const logDate = new Date(`${year}-${month}-${day}T${timePart}`);
+                
+                // Filter Tanggal
+                if (startDate && logDate < new Date(startDate)) return false;
+                if (endDate) {
+                    const endOfDay = new Date(endDate);
+                    endOfDay.setHours(23, 59, 59, 999); // Set to end of the selected day
+                    if (logDate > endOfDay) return false;
+                }
+
+                // Filter Pengguna
+                if (userFilter && log.username !== userFilter) return false;
+
+                // Filter Modul
+                if (moduleFilter && log.module !== moduleFilter) return false;
+
+                // Filter Tipe Aksi
+                if (actionTypeFilter && log.actionType !== actionTypeFilter) return false;
+
+                // Filter Teks Pencarian
+                if (searchText) {
+                    const descriptionMatch = log.description.toLowerCase().includes(searchText);
+                    const recordIdMatch = log.recordId ? String(log.recordId).toLowerCase().includes(searchText) : false;
+                    const oldValueMatch = log.oldValue ? JSON.stringify(log.oldValue).toLowerCase().includes(searchText) : false;
+                    const newValueMatch = log.newValue ? JSON.stringify(log.newValue).toLowerCase().includes(searchText) : false;
+                    
+                    if (!descriptionMatch && !recordIdMatch && !oldValueMatch && !newValueMatch) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+            const ws_data = [
+                ['Waktu', 'Pengguna ID', 'Username', 'Modul', 'Tipe Aksi', 'Record ID', 'Deskripsi', 'Nilai Lama', 'Nilai Baru', 'IP Address', 'Status']
+            ];
+            logsToExport.forEach(log => {
+                ws_data.push([
+                    log.timestamp,
+                    log.userId,
+                    log.username,
+                    log.module,
+                    log.actionType,
+                    log.recordId || '',
+                    log.description,
+                    log.oldValue ? JSON.stringify(log.oldValue, null, 2) : '', // Pretty print JSON
+                    log.newValue ? JSON.stringify(log.newValue, null, 2) : '', // Pretty print JSON
+                    log.ipAddress,
+                    log.status
+                ]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(ws_data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Laporan Aktivitas");
+            
+            const dateStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+            XLSX.writeFile(wb, `Laporan_Aktivitas_${dateStr}.xlsx`);
+            
+            recordActivity('Sistem', 'EXPORT', null, null, null, 'Mengekspor laporan aktivitas ke Excel', 'SUCCESS');
+        };
+
+        window.showLogDetailModal = (log) => {
+            const modalContent = document.getElementById('logDetailContent');
+            let content = `
+Timestamp: ${log.timestamp}
+User ID: ${log.userId}
+Username: ${log.username}
+Module: ${log.module}
+Action Type: ${log.actionType}
+Record ID: ${log.recordId || '-'}
+Description: ${log.description}
+IP Address: ${log.ipAddress}
+Status: ${log.status}
+`;
+
+            if (log.oldValue) {
+                content += `\n\n--- Nilai Lama ---\n${JSON.stringify(log.oldValue, null, 2)}`;
+            }
+            if (log.newValue) {
+                content += `\n\n--- Nilai Baru ---\n${JSON.stringify(log.newValue, null, 2)}`;
+            }
+            
+            modalContent.textContent = content;
+            logDetailModal.style.display = 'flex';
+        };
+
+        window.closeLogDetailModal = () => {
+            logDetailModal.style.display = 'none';
+        };
+
+        // Initial render when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            // NEW ADDITION: Catat aktivitas awal saat halaman dimuat jika belum ada log
+            if (state.activityLogs.length === 0) {
+                recordActivity('Sistem', 'INIT', null, null, null, 'Sistem dimulai (inisialisasi data)', 'SUCCESS');
+            }
+            renderUI();
+
+            // =======================================================
+            // PENCEGAHAN DEVELOPER TOOLS (NEW ADDITION)
+            // =======================================================
+
+            // Mencegah klik kanan (menu konteks)
+            document.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+            });
+
+            // Mencegah tombol pintas Developer Tools
+            document.addEventListener('keydown', function(e) {
+                // F12
+                if (e.keyCode === 123) {
+                    e.preventDefault();
+                }
+                // Ctrl+Shift+I (Windows/Linux) atau Cmd+Option+I (Mac)
+                if (e.ctrlKey && e.shiftKey && e.keyCode === 73) { // keyCode for 'I'
+                    e.preventDefault();
+                }
+                // Ctrl+Shift+J (Windows/Linux) atau Cmd+Option+J (Mac) - untuk Console
+                if (e.ctrlKey && e.shiftKey && e.keyCode === 74) { // keyCode for 'J'
+                    e.preventDefault();
+                }
+                // Ctrl+U (untuk melihat Source Code)
+                if (e.ctrlKey && e.keyCode === 85) { // keyCode for 'U'
+                    e.preventDefault();
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>
